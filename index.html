@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ff758c">
+    <meta name="description" content="A special invitation just for you.">
+    <title>For You ❤️</title>
+
+    <!-- Tab icon: a love heart -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23E91E63' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23E91E63' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>">
+
+    <!-- Core Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Premium Animated Background -->
+    <div class="bg-gradient-anim"></div>
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <!-- Particle/Emoji Rain Container -->
+    <div id="particle-container"></div>
+
+    <!-- Main Application Container -->
+    <div class="app-wrapper">
+        <div class="card" id="main-card">
+            <button id="backBtn" class="btn-back" aria-label="Go back" title="Go back">←</button>
+            <div id="view-container">
+                <!-- Views will be injected here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TEMPLATES FOR VIEWS                            -->
+    <!-- ============================================== -->
+
+    <!-- View 1: The Question -->
+    <template id="tpl-invite">
+        <div class="view scale-in">
+            <div class="heart-pulse-container">
+                <div class="big-heart">❤️</div>
+            </div>
+            <h1 class="pink-glow">Will you go on a date with me? 🌸</h1>
+            <div class="buttons-container" id="invite-buttons">
+                <button class="btn-primary btn-yes" id="btnYes">YES ❤️</button>
+                <button class="btn-secondary btn-no" id="btnNo">NO 😢</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- View 2: Activity -->
+    <template id="tpl-activity">
+        <div class="view slide-up">
+            <h1>🎯 What should we do?</h1>
+            <p class="subtitle">Pick an idea — you can tweak the details next</p>
+            <div class="grid-options" id="activity-grid">
+                <button class="grid-btn" data-ekey="coffee" data-value="Coffee + Walk ☕"><span class="tile-emoji">☕🥐</span><span class="tile-label">Coffee</span></button>
+                <button class="grid-btn" data-ekey="drinks" data-value="Drinks 🍹"><span class="tile-emoji">🍹🍸</span><span class="tile-label">Drinks</span></button>
+                <button class="grid-btn dinner-btn" data-ekey="dinner" data-value="Dinner + Walk 🍽"><span class="tile-emoji">🍽️🍷</span><span class="tile-label">Dinner</span></button>
+                <button class="grid-btn" data-ekey="bar" data-value="Bar / Pool 🎱"><span class="tile-emoji">🍺🎱</span><span class="tile-label">Bar / Pool</span></button>
+                <button class="grid-btn" data-ekey="movie" data-value="Cinema 🎬"><span class="tile-emoji">🎬🍿</span><span class="tile-label">Cinema</span></button>
+                <button class="grid-btn" data-ekey="sports" data-value="Sports — Tennis / Running / Swimming 🎾"><span class="tile-emoji">🎾🏃</span><span class="tile-label">Sports</span></button>
+                <button class="grid-btn" data-ekey="sun" data-value="Sun &amp; Tanning ☀️"><span class="tile-emoji">☀️🏖️</span><span class="tile-label">Sun / Tan</span></button>
+                <button class="grid-btn" data-ekey="bowling" data-value="Bowling 🎳"><span class="tile-emoji">🎳🏆</span><span class="tile-label">Bowling</span></button>
+                <button class="grid-btn" data-ekey="sunset" data-value="Sunset at Fort Henry 🌅"><span class="tile-emoji">🌅🌆</span><span class="tile-label">Sunset</span></button>
+                <button class="grid-btn" data-ekey="nightdrive" data-value="Night Drive 🌙"><span class="tile-emoji">🌙🚗</span><span class="tile-label">Night Drive</span></button>
+                <button class="grid-btn" data-ekey="games" data-value="Games / Escape Room 🎲"><span class="tile-emoji">🎲🕹️</span><span class="tile-label">Games</span></button>
+                <button class="grid-btn" data-ekey="art" data-value="Pottery / Art 🎨"><span class="tile-emoji">🎨🖌️</span><span class="tile-label">Art</span></button>
+                <button class="grid-btn" data-ekey="outdoor" data-value="Outdoor Adventure 🚲"><span class="tile-emoji">🚲🌲</span><span class="tile-label">Outdoors</span></button>
+                <button class="grid-btn" data-ekey="music" data-value="Live Music / Event 🎶"><span class="tile-emoji">🎤🎸</span><span class="tile-label">Live Music</span></button>
+                <button class="grid-btn" data-ekey="picnic" data-value="Picnic in the Park 🧺"><span class="tile-emoji">🧺🌳</span><span class="tile-label">Picnic</span></button>
+                <button class="grid-btn special-btn" data-special="he-plans"><span class="tile-emoji">💫</span><span class="tile-label">Let me plan it all — you just relax</span></button>
+                <button class="grid-btn special-btn" data-special="she-plans"><span class="tile-emoji">📋</span><span class="tile-label">I want to plan it myself</span></button>
+            </div>
+        </div>
+    </template>
+
+    <!-- View 2b: Tweak the chosen activity -->
+    <template id="tpl-activity-edit">
+        <div class="view slide-up">
+            <div class="edit-emoji-badge" id="editEmoji">💕</div>
+            <h1>✨ Great pick!</h1>
+            <p class="subtitle">Pick a vibe below, or type your own — the details are yours. 💕</p>
+            <div class="option-list" id="activityPresets"></div>
+            <div class="form-group mt-20">
+                <label for="activityEdit">Our plan</label>
+                <input type="text" id="activityEdit" class="custom-input" placeholder="e.g. Sunset by the lake instead">
+            </div>
+            <button class="btn-primary mt-20 w-100" id="btnActivityNext">Continue ➜</button>
+        </div>
+    </template>
+
+    <!-- View 2c: He plans (relax) -->
+    <template id="tpl-plan-he">
+        <div class="view slide-up">
+            <h1>💫 Leave it all to me</h1>
+            <p class="subtitle">Consider it handled — you just show up, relax, and enjoy. I've got the whole date planned. 😌</p>
+            <div class="form-group mt-20">
+                <label for="hePlanNotes">Any ideas or things you'd love me to include? (optional)</label>
+                <textarea id="hePlanNotes" class="custom-input custom-textarea" placeholder="Surprise me, but I do love..."></textarea>
+            </div>
+            <button class="btn-primary mt-30 w-100" id="btnHePlan">Sounds perfect ➜</button>
+        </div>
+    </template>
+
+    <!-- View 2d: She plans (warning) -->
+    <template id="tpl-plan-she">
+        <div class="view slide-up">
+            <h1>📋 You want to plan it?</h1>
+            <p class="subtitle">Hey now... I'm the <em>official</em> date planner here 😌 — but if you <em>really</em> insist, the floor is yours. What did you have in mind?</p>
+            <div class="form-group mt-20">
+                <label for="shePlanNotes">Your master plan</label>
+                <textarea id="shePlanNotes" class="custom-input custom-textarea" placeholder="Okay okay, here's my plan..."></textarea>
+            </div>
+            <button class="btn-primary mt-30 w-100" id="btnShePlan">I've got this 💪</button>
+        </div>
+    </template>
+
+    <!-- View 3a: Food — cuisine (populated by JS) -->
+    <template id="tpl-food-cuisine">
+        <div class="view slide-up">
+            <h1>🍽️ What are we eating?</h1>
+            <p class="subtitle">First, pick a cuisine</p>
+            <div class="grid-options" id="cuisine-grid"></div>
+        </div>
+    </template>
+
+    <!-- View 3b: Food — dish (populated by JS) -->
+    <template id="tpl-food-dish">
+        <div class="view slide-up">
+            <h1 id="dish-title">Pick a dish</h1>
+            <p class="subtitle">What sounds delicious?</p>
+            <div class="grid-options" id="dish-grid"></div>
+        </div>
+    </template>
+
+    <!-- View 4: Date and Time -->
+    <template id="tpl-datetime">
+        <div class="view slide-up">
+            <h1>✨ When are you free? ✨</h1>
+            
+            <div class="form-group mt-20">
+                <label for="datePicker">Select a Perfect Date</label>
+                <input type="date" id="datePicker" class="custom-input">
+            </div>
+            
+            <div class="form-group mt-20">
+                <label for="timeInput">Select Time</label>
+                <div class="select-wrapper">
+                    <select id="timeInput" class="custom-select">
+                        <option value="" disabled selected>Choose time</option>
+                        <!-- Options generated via JS (06:00 to 23:00) -->
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-primary mt-30 w-100" id="btnNextDateTime">Next Step ➜</button>
+        </div>
+    </template>
+
+    <!-- View 5: Excitement -->
+    <template id="tpl-excitement">
+        <div class="view slide-up">
+            <h1>🔥 How excited are you?</h1>
+            <div class="excitement-visualizer">
+                <div id="excitementEmoji" class="bouncing-emoji">😊</div>
+            </div>
+            <div class="slider-container">
+                <input type="range" min="1" max="100" value="50" class="custom-slider" id="excitementSlider">
+                <div class="slider-labels">
+                    <span>A little bit</span>
+                    <span>SUPER EXCITED!</span>
+                </div>
+            </div>
+            <button class="btn-primary mt-30 w-100" id="btnFinish">Send Invitation 💌</button>
+        </div>
+    </template>
+
+    <!-- View 6: Loading -->
+    <template id="tpl-loading">
+        <div class="view fade-in flex-center">
+            <div class="loader-heart"></div>
+            <h2 class="mt-20 sending-text">Sending love to the servers...</h2>
+        </div>
+    </template>
+
+    <!-- View 7: Final -->
+    <template id="tpl-final">
+        <div class="view scale-in">
+            <h1 class="final-title glow-text">❤️ It's a date! ❤️</h1>
+            <p class="final-desc">The invitation has been successfully sent.</p>
+            
+            <div class="summary-card mt-20">
+                <p><strong>Plan:</strong> <span id="final-activity"></span></p>
+                <p id="food-summary-row" style="display:none;"><strong>Food:</strong> <span id="final-food"></span></p>
+                <p id="notes-summary-row" style="display:none;"><strong>Notes:</strong> <span id="final-notes"></span></p>
+                <p><strong>When:</strong> <span id="final-time"></span></p>
+            </div>
+
+            <div class="bot-reminder-box mt-30">
+                <p class="subtitle mb-10">Don't forget our date! Add it to your calendar so it's official. 💕</p>
+                <a href="#" id="gcalLink" target="_blank" rel="noopener" class="btn-gcal">
+                    <span>📅 Add to Google Calendar</span>
+                </a>
+            </div>
+        </div>
+    </template>
+
+    <!-- Core Logic -->
+    <script src="script.js"></script>
+</body>
+</html>

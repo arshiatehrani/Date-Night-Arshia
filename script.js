@@ -1,0 +1,733 @@
+/**
+ * ==========================================================================
+ * CUTE DATE PROJECT - CORE LOGIC
+ * Architecture: Modular ES6 classes for maintainability and performance.
+ * ==========================================================================
+ */
+
+// --------------------------------------------------------------------------
+// 1. STATE MANAGEMENT
+// --------------------------------------------------------------------------
+const AppState = {
+    date: null,
+    time: null,
+    activity: null,
+    activityKey: 'default', // drives the emoji rain theme
+    activityEmoji: '💕',    // the category emoji (always kept)
+    needsFood: false,
+    food: null,
+    cuisineKey: null,
+    foodEmojis: [],
+    planner: null,          // 'me' | 'her' | null
+    planNotes: null,
+    excitement: 50,
+    emojiTheme: ['❤️']
+};
+
+// Diverse, activity-relevant emoji sets for the celebration rain.
+const ACTIVITY_EMOJIS = {
+    coffee:    ['☕', '🥐', '🍩', '🚶', '🌳', '💛', '❤️', '😊', '✨', '🌸'],
+    drinks:    ['🍹', '🍸', '🍺', '🥂', '🍾', '🍋', '🌴', '❤️', '✨', '😋'],
+    bar:       ['🎱', '🍸', '🍺', '🎯', '🕶️', '🎶', '🍻', '😎', '❤️', '✨'],
+    dinner:    ['🍽️', '🍷', '🕯️', '🍝', '🥂', '🌙', '❤️', '😋', '🌹', '✨'],
+    movie:     ['🎬', '🍿', '🎥', '🍰', '🥤', '⭐', '❤️', '😍', '🎞️', '✨'],
+    sports:    ['🎾', '🏃', '🏊', '🏸', '⚽', '💪', '🥇', '🔥', '❤️', '✨'],
+    sun:       ['☀️', '🏖️', '🕶️', '🌞', '🌴', '🍹', '😎', '🌊', '❤️', '✨'],
+    bowling:   ['🎳', '🎯', '🏆', '🥎', '🎉', '🕺', '😄', '🔥', '❤️', '✨'],
+    sunset:    ['🌅', '🌇', '🏰', '💛', '🧡', '✨', '❤️', '🥰', '🌊', '⭐'],
+    nightdrive:['🌙', '🚗', '🌃', '🎵', '⭐', '🌌', '🛣️', '💫', '❤️', '✨'],
+    games:     ['🎲', '🕹️', '🧩', '🔐', '🎯', '🏆', '❤️', '😄', '🎮', '✨'],
+    art:       ['🎨', '🖌️', '🏺', '🖼️', '✏️', '🌈', '❤️', '✨', '🎭', '💜'],
+    outdoor:   ['🚲', '🥾', '🏞️', '🌲', '🛶', '☀️', '❤️', '💪', '🍃', '✨'],
+    music:     ['🎶', '🎤', '🎸', '🎧', '🎉', '🕺', '❤️', '🥳', '🎼', '✨'],
+    picnic:    ['🧺', '🌳', '🍓', '🥪', '☀️', '🌸', '❤️', '✨', '🍷', '🦋'],
+    heplans:   ['💫', '✨', '😌', '🎁', '❤️', '🥰', '🌹', '💝', '🌟', '💖'],
+    sheplans:  ['📋', '📝', '💪', '😏', '❤️', '✨', '🎯', '💕', '🗒️', '🌟'],
+    default:   ['❤️', '💕', '💖', '✨', '🌸', '😊', '💗', '🥰']
+};
+
+// Cuisines -> specific dishes. emoji = tile/rain emoji; dishes carry their own emoji + name.
+const CUISINES = [
+    { key: 'italian',  name: 'Italian',        emoji: '🍕', dishes: [{ e: '🍕', n: 'Pizza' }, { e: '🍝', n: 'Pasta' }, { e: '🍚', n: 'Risotto' }, { e: '🧀', n: 'Lasagna' }] },
+    { key: 'japanese', name: 'Japanese',       emoji: '🍣', dishes: [{ e: '🍣', n: 'Sushi' }, { e: '🍜', n: 'Ramen' }, { e: '🍤', n: 'Tempura' }, { e: '🍱', n: 'Bento' }] },
+    { key: 'chinese',  name: 'Chinese',        emoji: '🥡', dishes: [{ e: '🥟', n: 'Dumplings' }, { e: '🍜', n: 'Noodles' }, { e: '🍚', n: 'Fried Rice' }, { e: '🍲', n: 'Hot Pot' }] },
+    { key: 'mexican',  name: 'Mexican',        emoji: '🌮', dishes: [{ e: '🌮', n: 'Tacos' }, { e: '🌯', n: 'Burritos' }, { e: '🧀', n: 'Quesadilla' }, { e: '🫓', n: 'Nachos' }] },
+    { key: 'indian',   name: 'Indian',         emoji: '🍛', dishes: [{ e: '🍛', n: 'Butter Chicken' }, { e: '🍚', n: 'Biryani' }, { e: '🥘', n: 'Curry' }, { e: '🫓', n: 'Naan' }] },
+    { key: 'american', name: 'American',       emoji: '🍔', dishes: [{ e: '🍔', n: 'Burgers' }, { e: '🍖', n: 'BBQ' }, { e: '🍗', n: 'Fried Chicken' }, { e: '🥩', n: 'Steak' }] },
+    { key: 'mideast',  name: 'Middle Eastern', emoji: '🥙', dishes: [{ e: '🥙', n: 'Shawarma' }, { e: '🍢', n: 'Kebab' }, { e: '🧆', n: 'Falafel' }, { e: '🍚', n: 'Persian Rice' }] },
+    { key: 'dessert',  name: 'Dessert',        emoji: '🍰', dishes: [{ e: '🍨', n: 'Ice Cream' }, { e: '🍰', n: 'Cake' }, { e: '🥐', n: 'Pastries' }, { e: '🍫', n: 'Chocolate' }] }
+];
+
+// Generic "vibe" presets shown on the details step. Selecting one fills the editable field.
+const ACTIVITY_PRESETS = {
+    coffee:     ['Downtown café ☕', 'Waterfront coffee walk 🌊', 'Cozy bookshop café 📚', 'Try a new roastery 🔥'],
+    drinks:     ['Rooftop bar 🍸', 'Wine bar 🍷', 'Craft cocktails 🍹', 'Casual pints 🍺'],
+    dinner:     ['Cozy Italian 🍝', 'Rooftop dinner 🌃', 'Waterfront restaurant 🌊', 'Casual & fun 🍔'],
+    bar:        ['Pool & billiards 🎱', 'Sports bar 📺', 'Cocktail lounge 🍸', 'Darts & games 🎯'],
+    movie:      ['New release 🎬', 'Cozy indie film 🎞️', 'Dinner + a movie 🍽️', 'Movie night at home 🏠'],
+    sports:     ['Tennis match 🎾', 'Morning run 🏃', 'Swim session 🏊', 'Bike ride 🚴'],
+    sun:        ['Beach day 🏖️', 'Park & tan ☀️', 'Lakeside lounging 🌊', 'Rooftop sunbathing 🌆'],
+    bowling:    ['Classic bowling 🎳', 'Bowling + arcade 🕹️', 'Cosmic night bowling 🌌', 'Friendly tournament 🏆'],
+    sunset:     ['Fort Henry lookout 🏰', 'Lakeside sunset 🌊', 'Rooftop sunset 🌇', 'Sunset drive 🚗'],
+    nightdrive: ['Scenic route 🛣️', 'City lights tour 🌃', 'Drive + good music 🎵', 'Late-night snack run 🍟'],
+    games:      ['Escape room 🔐', 'Board game café 🎲', 'Arcade 🕹️', 'Trivia night 🧠'],
+    art:        ['Pottery class 🏺', 'Paint night 🎨', 'Gallery visit 🖼️', 'Craft workshop ✂️'],
+    outdoor:    ['Hiking trail 🥾', 'Kayaking 🛶', 'Bike ride 🚲', 'Nature walk 🌲'],
+    music:      ['Live band 🎸', 'Jazz night 🎷', 'Open mic 🎤', 'Local gig 🎶'],
+    picnic:     ['Lakeside picnic 🌊', 'Park picnic 🌳', 'Sunset picnic 🌇', 'Cheese & wine 🧀']
+};
+
+// --------------------------------------------------------------------------
+// 2. SYSTEM INFO DETECTOR
+// --------------------------------------------------------------------------
+class SystemDetector {
+    static getInfo() {
+        const ua = navigator.userAgent;
+        let os = "Unknown";
+        let browser = "Unknown";
+        let device = "Desktop";
+
+        if (/Windows/.test(ua)) os = "Windows";
+        else if (/Mac OS X/.test(ua)) os = "Mac";
+        else if (/Linux/.test(ua)) os = "Linux";
+        else if (/Android/.test(ua)) os = "Android";
+        else if (/iPhone/.test(ua)) os = "iPhone";
+        else if (/iPad/.test(ua)) os = "iPad";
+
+        if (/Mobi|Android|iPhone/.test(ua)) device = "Mobile";
+        else if (/Tablet|iPad/.test(ua)) device = "Tablet";
+
+        if (/OPR|Opera/.test(ua)) browser = "Opera";
+        else if (/Edg/.test(ua)) browser = "Edge";
+        else if (/SamsungBrowser/.test(ua)) browser = "Samsung Internet";
+        else if (/Chrome/.test(ua)) browser = "Chrome";
+        else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browser = "Safari";
+        else if (/Firefox/.test(ua)) browser = "Firefox";
+
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || {};
+
+        return {
+            os, browser, device,
+            language: navigator.language,
+            languages: (navigator.languages || []).join(', '),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            screenRes: `${screen.width}x${screen.height}`,
+            viewport: `${window.innerWidth}x${window.innerHeight}`,
+            pixelRatio: window.devicePixelRatio,
+            colorDepth: `${screen.colorDepth}-bit`,
+            orientation: (screen.orientation && screen.orientation.type) || 'unknown',
+            touchPoints: navigator.maxTouchPoints || 0,
+            cpuCores: navigator.hardwareConcurrency || 'unknown',
+            deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'unknown',
+            connection: conn.effectiveType || 'unknown',
+            online: navigator.onLine,
+            cookiesEnabled: navigator.cookieEnabled,
+            referrer: document.referrer || 'direct',
+            url: window.location.href,
+            userAgent: ua,
+            localTime: new Date().toLocaleString(),
+            timestamp: Date.now()
+        };
+    }
+}
+
+// --------------------------------------------------------------------------
+// 3. TELEGRAM INTEGRATION
+// --------------------------------------------------------------------------
+class TelegramService {
+    static async sendPayload() {
+        const sys = SystemDetector.getInfo();
+
+        const plannerLine = AppState.planner === 'me'
+            ? '🧭 Planner: Arshia (she just relaxes)\n'
+            : AppState.planner === 'her'
+                ? '🧭 Planner: She insisted on planning\n'
+                : '';
+
+        const message = `❤️ New Date Accepted ❤️
+📅 Date: ${AppState.date}
+🕒 Time: ${AppState.time}
+🎯 Plan: ${AppState.activity}
+${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
+
+📱 Device: ${sys.device}
+🌐 Browser: ${sys.browser}
+💻 OS: ${sys.os}
+🖥️ Screen: ${sys.screenRes} (viewport ${sys.viewport}, ${sys.pixelRatio}x)
+🎨 Color depth: ${sys.colorDepth}
+📐 Orientation: ${sys.orientation}
+✋ Touch points: ${sys.touchPoints}
+⚙️ CPU cores: ${sys.cpuCores} | Memory: ${sys.deviceMemory}
+📶 Connection: ${sys.connection} | Online: ${sys.online}
+🍪 Cookies: ${sys.cookiesEnabled}
+🗣️ Language: ${sys.language} (${sys.languages})
+🌍 Timezone: ${sys.timezone}
+🕰️ Local Time: ${sys.localTime}
+🔗 Referrer: ${sys.referrer}
+🌐 URL: ${sys.url}`;
+
+        const workerURL = "https://date-night-arshia.arshia-tehrani1380.workers.dev/";
+
+        try {
+            await fetch(`${workerURL}?text=${encodeURIComponent(message)}`, {
+                method: 'GET',
+                mode: 'no-cors'
+            });
+            return true;
+        } catch (error) {
+            console.error("Transmission failed:", error);
+            return true; // Proceed anyway for UX
+        }
+    }
+}
+
+// --------------------------------------------------------------------------
+// 4. PARTICLE PHYSICS ENGINE
+// --------------------------------------------------------------------------
+class ParticleEngine {
+    constructor() {
+        this.container = document.getElementById('particle-container');
+        this.particles = [];
+        this.animationId = null;
+        this.active = false;
+    }
+
+    createRain(emojis) {
+        this.active = true;
+        const count = window.innerWidth < 600 ? 50 : 100;
+
+        for (let i = 0; i < count; i++) {
+            this.spawnParticle(emojis);
+        }
+        this.animate();
+    }
+
+    spawnParticle(emojis) {
+        const el = document.createElement('div');
+        el.className = 'particle';
+        el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+
+        const size = Math.random() * 35 + 15;
+        const x = Math.random() * window.innerWidth;
+        const y = -50 - Math.random() * 150;
+
+        const particleObj = {
+            el: el, x: x, y: y, size: size,
+            speedY: Math.random() * 4 + 2,
+            speedX: (Math.random() - 0.5) * 2,
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 6
+        };
+
+        el.style.fontSize = `${size}px`;
+        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${particleObj.rotation}deg)`;
+
+        this.container.appendChild(el);
+        this.particles.push(particleObj);
+    }
+
+    animate = () => {
+        if (!this.active) return;
+
+        const h = window.innerHeight;
+        const w = window.innerWidth;
+
+        for (let i = 0; i < this.particles.length; i++) {
+            let p = this.particles[i];
+            p.y += p.speedY;
+            p.x += p.speedX;
+            p.rotation += p.rotationSpeed;
+            p.x += Math.sin(p.y * 0.015) * 0.8; // Smooth wobble
+
+            p.el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) rotate(${p.rotation}deg)`;
+
+            if (p.y > h + 50) {
+                p.y = -50;
+                p.x = Math.random() * w;
+            }
+        }
+        this.animationId = requestAnimationFrame(this.animate);
+    }
+}
+const Particles = new ParticleEngine();
+
+// --------------------------------------------------------------------------
+// 5. NO BUTTON DODGE LOGIC
+// The button flees the cursor *before* contact using a proximity radius on a
+// document-level mousemove, so it can never be hovered or held. Motion is a
+// smooth glide (CSS transition on left/top), not a jittery per-pixel jump.
+// --------------------------------------------------------------------------
+class DodgeMechanic {
+    constructor(btnElement) {
+        this.btn = btnElement;
+        this.playfield = document.getElementById('main-card'); // stays inside the card = always visible
+        this.threshold = 120;   // px: cursor gets this close -> glide away
+        this.step = 150;        // px: gentle move distance (no big teleports)
+        this.pad = 8;           // keep fully inside the card
+        this.placed = false;
+
+        this.onMove = this.onMove.bind(this);
+        this.onTouch = this.onTouch.bind(this);
+
+        document.addEventListener('mousemove', this.onMove, { passive: true });
+        this.btn.addEventListener('mouseenter', this.onMove, { passive: true });
+        this.btn.addEventListener('touchstart', this.onTouch, { passive: false });
+    }
+
+    destroy() {
+        document.removeEventListener('mousemove', this.onMove);
+        // If we relocated the button onto <body>, remove that stray copy.
+        if (this.placed && this.btn.parentNode === document.body) {
+            this.btn.parentNode.removeChild(this.btn);
+        }
+    }
+
+    rect() { return this.btn.getBoundingClientRect(); }
+
+    // Bounds (in viewport coords) the button may occupy — the card's inner area.
+    bounds() {
+        const r = this.rect();
+        const c = this.playfield.getBoundingClientRect();
+        return {
+            minX: c.left + this.pad,
+            maxX: c.right - r.width - this.pad,
+            minY: c.top + this.pad,
+            maxY: c.bottom - r.height - this.pad,
+            w: r.width,
+            h: r.height
+        };
+    }
+
+    onMove(e) {
+        if (!document.body.contains(this.btn)) { this.destroy(); return; }
+        const r = this.rect();
+        const bcx = r.left + r.width / 2;
+        const bcy = r.top + r.height / 2;
+        if (Math.hypot(e.clientX - bcx, e.clientY - bcy) < this.threshold) {
+            this.flee(e.clientX, e.clientY);
+        }
+    }
+
+    onTouch(e) {
+        e.preventDefault();
+        const t = e.touches[0] || {};
+        this.flee(t.clientX || 0, t.clientY || 0);
+    }
+
+    flee(cx, cy) {
+        const b = this.bounds();
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+        const r = this.rect();
+
+        // Glide directly away from the cursor by a gentle step, clamped inside the card.
+        const ang = Math.atan2((r.top + r.height / 2) - cy, (r.left + r.width / 2) - cx);
+        let nx = clamp(r.left + Math.cos(ang) * this.step, b.minX, b.maxX);
+        let ny = clamp(r.top + Math.sin(ang) * this.step, b.minY, b.maxY);
+
+        // If cornered (still too close after clamping), slide to whichever card corner
+        // is farthest from the cursor — a smooth move that keeps it fully visible.
+        const stillClose = Math.hypot((nx + b.w / 2) - cx, (ny + b.h / 2) - cy) < this.threshold;
+        if (stillClose) {
+            const corners = [
+                [b.minX, b.minY], [b.maxX, b.minY],
+                [b.minX, b.maxY], [b.maxX, b.maxY]
+            ];
+            let best = corners[0], bestD = -1;
+            for (const [tx, ty] of corners) {
+                const d = Math.hypot((tx + b.w / 2) - cx, (ty + b.h / 2) - cy);
+                if (d > bestD) { bestD = d; best = [tx, ty]; }
+            }
+            [nx, ny] = best;
+        }
+
+        this.setPos(nx, ny);
+    }
+
+    setPos(x, y) {
+        if (!this.placed) {
+            // Capture the on-screen spot BEFORE moving, so there's no visual jump.
+            const r = this.rect();
+            // Relocate onto <body>: the card's backdrop-filter turns it into a containing
+            // block for fixed children (and clips them), so a card-child button would vanish.
+            // On <body> (no filter/transform) position:fixed is truly viewport-relative.
+            document.body.appendChild(this.btn);
+            this.btn.style.transition = 'none';
+            this.btn.style.position = 'fixed';
+            this.btn.style.margin = '0';
+            this.btn.style.transform = 'none';
+            this.btn.style.zIndex = '9999';
+            this.btn.style.left = `${r.left}px`;
+            this.btn.style.top = `${r.top}px`;
+            void this.btn.offsetWidth; // force reflow so the start point registers
+            this.btn.style.transition = 'left 0.22s cubic-bezier(0.25,0.46,0.45,0.94), top 0.22s cubic-bezier(0.25,0.46,0.45,0.94)';
+            this.placed = true;
+        }
+        this.btn.style.left = `${x}px`;
+        this.btn.style.top = `${y}px`;
+    }
+}
+
+// --------------------------------------------------------------------------
+// 6. UI CONTROLLER (View Router)
+// --------------------------------------------------------------------------
+class UIController {
+    constructor() {
+        this.container = document.getElementById('view-container');
+        this.backBtn = document.getElementById('backBtn');
+        this.dodge = null;
+        this.stack = [];          // history of previous steps {templateId, binder}
+        this.currentStep = null;
+        this.backBtn.addEventListener('click', () => this.back());
+        this.init();
+    }
+
+    init() {
+        this.show('tpl-invite', this.bindInviteEvents.bind(this), { reset: true });
+    }
+
+    // Render a template and run its binder. Low-level (no history changes).
+    renderView(templateId, binder) {
+        if (this.dodge) { this.dodge.destroy(); this.dodge = null; } // clean up between views
+        this.container.innerHTML = '';
+        const template = document.getElementById(templateId);
+        this.container.appendChild(template.content.cloneNode(true));
+        if (binder) binder();
+        this.updateBackButton();
+    }
+
+    // Navigate forward to a new step (pushes the current step onto history).
+    show(templateId, binder, opts = {}) {
+        if (opts.reset) this.stack = [];
+        else if (this.currentStep) this.stack.push(this.currentStep);
+        this.currentStep = { templateId, binder };
+        this.renderView(templateId, binder);
+    }
+
+    // Navigate back to the previous step.
+    back() {
+        if (!this.stack.length) return;
+        this.currentStep = this.stack.pop();
+        this.renderView(this.currentStep.templateId, this.currentStep.binder);
+    }
+
+    updateBackButton() {
+        this.backBtn.style.display = this.stack.length ? 'flex' : 'none';
+    }
+
+    // --- View 1: Invite -----------------------------------------------------
+    bindInviteEvents() {
+        const btnYes = document.getElementById('btnYes');
+        const btnNo = document.getElementById('btnNo');
+
+        this.dodge = new DodgeMechanic(btnNo);
+
+        btnYes.addEventListener('click', () => {
+            this.show('tpl-activity', this.bindActivityEvents.bind(this));
+        });
+    }
+
+    // --- View 2: Activity ---------------------------------------------------
+    bindActivityEvents() {
+        const grid = document.getElementById('activity-grid');
+
+        grid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.grid-btn');
+            if (!btn) return;
+
+            const special = btn.getAttribute('data-special');
+            if (special === 'he-plans') { this.show('tpl-plan-he', this.bindHePlan.bind(this)); return; }
+            if (special === 'she-plans') { this.show('tpl-plan-she', this.bindShePlan.bind(this)); return; }
+
+            grid.querySelectorAll('.grid-btn').forEach((b) => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            AppState.activity = btn.getAttribute('data-value');
+            AppState.activityKey = btn.getAttribute('data-ekey') || 'default';
+            const emojiSpan = btn.querySelector('.tile-emoji');
+            AppState.activityEmoji = emojiSpan ? emojiSpan.innerText : '💕';
+            AppState.needsFood = AppState.activityKey === 'dinner';
+            // Leaving the dinner branch: drop any stale food so it can't pollute the summary/payload.
+            if (!AppState.needsFood) { AppState.food = null; AppState.cuisineKey = null; AppState.foodEmojis = []; }
+            AppState.planner = null;
+            AppState.planNotes = null;
+
+            grid.style.pointerEvents = 'none'; // ignore rapid double-clicks during the transition
+            setTimeout(() => {
+                this.show('tpl-activity-edit', this.bindActivityEdit.bind(this));
+            }, 250);
+        });
+    }
+
+    // --- View 2b: Tweak activity (preset vibes + free text) ----------------
+    bindActivityEdit() {
+        const input = document.getElementById('activityEdit');
+        const btn = document.getElementById('btnActivityNext');
+        const badge = document.getElementById('editEmoji');
+        const list = document.getElementById('activityPresets');
+
+        // The category emoji stays put — it's part of the category.
+        badge.innerText = AppState.activityEmoji || '💕';
+        input.value = AppState.activity;
+
+        // Generic "vibe" options to pick from.
+        const presets = ACTIVITY_PRESETS[AppState.activityKey] || [];
+        list.innerHTML = '';
+        presets.forEach((p) => {
+            const b = document.createElement('button');
+            b.className = 'option-item';
+            b.innerText = p;
+            if (p === AppState.activity) b.classList.add('selected');
+            b.addEventListener('click', () => {
+                list.querySelectorAll('.option-item').forEach((x) => x.classList.remove('selected'));
+                b.classList.add('selected');
+                input.value = p;              // selecting a vibe changes the detail...
+                AppState.activity = p;        // ...but the category emoji badge stays
+            });
+            list.appendChild(b);
+        });
+
+        const proceed = () => {
+            const v = input.value.trim();
+            if (v) AppState.activity = v;
+            if (AppState.needsFood) {
+                this.show('tpl-food-cuisine', this.bindFoodCuisine.bind(this));
+            } else {
+                this.show('tpl-datetime', this.bindDateTimeEvents.bind(this));
+            }
+        };
+        btn.addEventListener('click', proceed);
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') proceed(); });
+    }
+
+    // --- View 2c: He plans --------------------------------------------------
+    bindHePlan() {
+        if (AppState.planner !== 'me') AppState.planNotes = null; // don't carry the other mode's notes
+        AppState.planner = 'me';
+        AppState.activity = 'Let me plan it — a surprise 💫';
+        AppState.activityKey = 'heplans';
+        AppState.needsFood = false;
+        AppState.food = null; AppState.cuisineKey = null; AppState.foodEmojis = [];
+
+        const notes = document.getElementById('hePlanNotes');
+        if (AppState.planNotes) notes.value = AppState.planNotes;
+        document.getElementById('btnHePlan').addEventListener('click', () => {
+            AppState.planNotes = notes.value.trim() || null;
+            this.show('tpl-datetime', this.bindDateTimeEvents.bind(this));
+        });
+    }
+
+    // --- View 2d: She plans -------------------------------------------------
+    bindShePlan() {
+        if (AppState.planner !== 'her') AppState.planNotes = null; // don't carry the other mode's notes
+        AppState.planner = 'her';
+        AppState.activity = "You're planning it 📋";
+        AppState.activityKey = 'sheplans';
+        AppState.needsFood = false;
+        AppState.food = null; AppState.cuisineKey = null; AppState.foodEmojis = [];
+
+        const notes = document.getElementById('shePlanNotes');
+        if (AppState.planNotes) notes.value = AppState.planNotes;
+        document.getElementById('btnShePlan').addEventListener('click', () => {
+            AppState.planNotes = notes.value.trim() || null;
+            this.show('tpl-datetime', this.bindDateTimeEvents.bind(this));
+        });
+    }
+
+    // --- View 3a: Food cuisine ---------------------------------------------
+    bindFoodCuisine() {
+        const grid = document.getElementById('cuisine-grid');
+        grid.innerHTML = '';
+        CUISINES.forEach((c) => {
+            grid.appendChild(this.makeTile(c.emoji, c.name, () => {
+                AppState.cuisineKey = c.key;
+                this.show('tpl-food-dish', this.bindFoodDish.bind(this));
+            }));
+        });
+    }
+
+    // --- View 3b: Food dish -------------------------------------------------
+    bindFoodDish() {
+        const c = CUISINES.find((x) => x.key === AppState.cuisineKey) || CUISINES[0];
+        document.getElementById('dish-title').innerText = `${c.emoji} ${c.name} — pick a dish`;
+        const grid = document.getElementById('dish-grid');
+        grid.innerHTML = '';
+        c.dishes.forEach((dish) => {
+            grid.appendChild(this.makeTile(dish.e, dish.n, () => {
+                AppState.food = `${c.name} – ${dish.n} ${dish.e}`;
+                AppState.foodEmojis = [c.emoji, dish.e];
+                this.show('tpl-datetime', this.bindDateTimeEvents.bind(this));
+            }));
+        });
+    }
+
+    // Build a grid tile with the emoji-on-top / label-below layout.
+    makeTile(emoji, label, onClick) {
+        const b = document.createElement('button');
+        b.className = 'grid-btn';
+        b.innerHTML = `<span class="tile-emoji">${emoji}</span><span class="tile-label">${label}</span>`;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+
+    // --- View 4: Date & time -----------------------------------------------
+    bindDateTimeEvents() {
+        const dateInput = document.getElementById('datePicker');
+        const timeSelect = document.getElementById('timeInput');
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+
+        // Block past dates in the picker itself.
+        dateInput.min = todayStr;
+
+        // Build the full day 00:00–23:30 (30-min steps) once.
+        while (timeSelect.options.length > 1) timeSelect.remove(1);
+        for (let h = 0; h <= 23; h++) {
+            const hs = pad(h);
+            timeSelect.add(new Option(`${hs}:00`, `${hs}:00`));
+            timeSelect.add(new Option(`${hs}:30`, `${hs}:30`));
+        }
+
+        const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+        // If the chosen day is today, hide/disable any time at or before "now".
+        const filterTimes = () => {
+            const isToday = dateInput.value === todayStr;
+            for (const opt of timeSelect.options) {
+                if (!opt.value) continue;
+                const past = isToday && toMin(opt.value) <= nowMin;
+                opt.disabled = past;
+                opt.hidden = past;
+                if (past && opt.selected) timeSelect.selectedIndex = 0;
+            }
+        };
+        dateInput.addEventListener('change', filterTimes);
+
+        // Restore previous choices when arriving via Back, then filter — filterTimes()
+        // resets the selection to the placeholder if that slot has since passed.
+        if (AppState.date) dateInput.value = AppState.date;
+        if (AppState.time) timeSelect.value = AppState.time;
+        filterTimes();
+
+        document.getElementById('btnNextDateTime').addEventListener('click', () => {
+            const dateVal = dateInput.value;
+            const timeVal = timeSelect.value;
+
+            if (!dateVal || !timeVal) {
+                alert("Please select both a date and time so I can plan perfectly! ❤️");
+                return;
+            }
+            if (dateVal < todayStr) {
+                alert("That date is in the past — pick today or later! 🗓️");
+                return;
+            }
+            if (dateVal === todayStr && toMin(timeVal) <= nowMin) {
+                alert("That time has already passed today — pick a later time! ⏰");
+                return;
+            }
+
+            AppState.date = dateVal;
+            AppState.time = timeVal;
+            this.show('tpl-excitement', this.bindExcitementEvents.bind(this));
+        });
+    }
+
+    // --- View 5: Excitement -------------------------------------------------
+    bindExcitementEvents() {
+        const slider = document.getElementById('excitementSlider');
+        const emojiDisplay = document.getElementById('excitementEmoji');
+        const btnFinish = document.getElementById('btnFinish');
+
+        const render = (val) => {
+            AppState.excitement = val;
+            let emoji = '😊', scale = 1;
+            if (val < 20) { emoji = '🙂'; scale = 0.85; }
+            else if (val < 40) { emoji = '😌'; scale = 0.95; }
+            else if (val < 60) { emoji = '😊'; scale = 1.05; }
+            else if (val < 80) { emoji = '🥰'; scale = 1.25; }
+            else if (val < 95) { emoji = '😍'; scale = 1.45; }
+            else { emoji = '🤯❤️'; scale = 1.7; }
+            emojiDisplay.innerText = emoji;
+            emojiDisplay.style.transform = `scale(${scale})`;
+        };
+
+        slider.value = AppState.excitement; // restore on Back
+        render(AppState.excitement);
+        slider.addEventListener('input', (e) => render(parseInt(e.target.value)));
+
+        btnFinish.addEventListener('click', async () => {
+            this.stack = [];                 // no going back once we're sending
+            this.renderView('tpl-loading');  // transient, not a history step
+            await TelegramService.sendPayload();
+            setTimeout(() => {
+                this.show('tpl-final', this.bindFinalEvents.bind(this), { reset: true }); // no Back from the end
+            }, 1200);
+        });
+    }
+
+    // --- View 7: Final ------------------------------------------------------
+    bindFinalEvents() {
+        document.getElementById('final-activity').innerText = AppState.activity;
+        document.getElementById('final-time').innerText = `${AppState.date} at ${AppState.time}`;
+
+        if (AppState.food) {
+            document.getElementById('food-summary-row').style.display = 'flex';
+            document.getElementById('final-food').innerText = AppState.food;
+        }
+        if (AppState.planNotes) {
+            document.getElementById('notes-summary-row').style.display = 'flex';
+            document.getElementById('final-notes').innerText = AppState.planNotes;
+        }
+
+        this.buildCalendarLink();
+
+        // Build a diverse, activity-relevant emoji theme for the rain.
+        let theme = (ACTIVITY_EMOJIS[AppState.activityKey] || ACTIVITY_EMOJIS.default).slice();
+        theme = theme.concat(AppState.foodEmojis || []);
+        theme.push('❤️', '💕');
+        AppState.emojiTheme = [...new Set(theme)];
+
+        Particles.createRain(AppState.emojiTheme);
+    }
+
+    buildCalendarLink() {
+        const link = document.getElementById('gcalLink');
+        if (!link || !AppState.date || !AppState.time) return;
+
+        const pad = (n) => String(n).padStart(2, '0');
+        const [y, m, d] = AppState.date.split('-').map(Number);
+        const [hh, mm] = AppState.time.split(':').map(Number);
+
+        // Local "floating" time (no Z): the event shows at this clock time in any timezone.
+        const start = new Date(y, m - 1, d, hh, mm);
+        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2-hour date
+
+        const fmt = (dt) =>
+            `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
+            `T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+
+        const details = `Our date! Plan: ${AppState.activity}` +
+            (AppState.food ? ` | Food: ${AppState.food}` : '') +
+            (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
+            ` | Excitement: ${AppState.excitement}/100 💕`;
+
+        const params = new URLSearchParams({
+            action: 'TEMPLATE',
+            text: `Date: ${AppState.activity}`,
+            dates: `${fmt(start)}/${fmt(end)}`,
+            details: details,
+            location: 'Kingston, Ontario'
+        });
+
+        link.href = `https://calendar.google.com/calendar/render?${params.toString()}`;
+    }
+}
+
+// --------------------------------------------------------------------------
+// 7. BOOTSTRAP
+// --------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new UIController();
+});
