@@ -797,29 +797,40 @@ button:active {
 /* ==========================================================================
    RESPONSIVE DESIGN
    ========================================================================== */
+/* Phones (portrait) */
 @media (max-width: 480px) {
     .card {
-        padding: 30px 20px;
+        padding: 28px 18px;
         min-height: auto;
         border-radius: 28px;
     }
 
-    h1 {
-        font-size: 24px;
-    }
+    h1 { font-size: 23px; }
+    .subtitle { font-size: 14px; margin-bottom: 18px; }
 
-    .grid-options {
-        gap: 10px;
-    }
+    .grid-options { gap: 9px; }
 
     .grid-btn {
-        padding: 14px 5px;
-        font-size: 14px;
+        padding: 12px 4px;
+        font-size: 13px;
+        min-height: 78px;
     }
+    .tile-emoji { font-size: 20px; letter-spacing: 1px; }
+    .tile-label { font-size: 13px; }
 
-    .bouncing-emoji {
-        font-size: 55px;
-    }
+    .edit-emoji-badge { font-size: 40px; }
+    .option-item { font-size: 12px; padding: 8px 12px; }
+    .bouncing-emoji { font-size: 55px; }
+}
+
+/* Small / older phones (e.g. 320–360px Androids, iPhone SE) — keep 3 columns, just tighter */
+@media (max-width: 360px) {
+    .card { padding: 24px 14px; }
+    h1 { font-size: 21px; }
+    .grid-options { gap: 7px; }
+    .grid-btn { min-height: 70px; padding: 10px 3px; }
+    .tile-emoji { font-size: 17px; letter-spacing: 0.5px; }
+    .tile-label { font-size: 12px; line-height: 1.15; }
 }
 
 /* Short / landscape screens (e.g. phone on its side): tighten so it fits without scrolling where possible */
@@ -850,6 +861,4 @@ button:active {
     .special-btn:hover {
         transform: none;
     }
-    /* Bigger, comfortable tap targets */
-    .grid-btn { min-height: 60px; }
 }
