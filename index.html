@@ -46,7 +46,7 @@
             <div class="heart-pulse-container">
                 <div class="big-heart">❤️</div>
             </div>
-            <h1 class="pink-glow">Will you go on a date with me? 🌸</h1>
+            <h1 class="pink-glow" id="inviteTitle">Will you go on a date with me? 🌸</h1>
             <div class="buttons-container" id="invite-buttons">
                 <button class="btn-primary btn-yes" id="btnYes">YES ❤️</button>
                 <button class="btn-secondary btn-no" id="btnNo">NO 😢</button>
@@ -147,7 +147,10 @@
             
             <div class="form-group mt-20">
                 <label for="datePicker">Select a Perfect Date</label>
-                <input type="date" id="datePicker" class="custom-input">
+                <div class="date-field">
+                    <input type="date" id="datePicker" class="custom-input">
+                    <span class="date-hint">Choose date 📅</span>
+                </div>
             </div>
             
             <div class="form-group mt-20">

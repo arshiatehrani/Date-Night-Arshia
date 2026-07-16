@@ -11,6 +11,7 @@
 const AppState = {
     date: null,
     time: null,
+    recipient: null,        // from the ?to= URL param (who you sent the link to)
     activity: null,
     activityKey: 'default', // drives the emoji rain theme
     activityEmoji: '💕',    // the category emoji (always kept)
@@ -145,7 +146,7 @@ class TelegramService {
                 : '';
 
         const message = `❤️ New Date Accepted ❤️
-📅 Date: ${AppState.date}
+${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: ${AppState.date}
 🕒 Time: ${AppState.time}
 🎯 Plan: ${AppState.activity}
 ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
@@ -381,8 +382,20 @@ class UIController {
         this.dodge = null;
         this.stack = [];          // history of previous steps {templateId, binder}
         this.currentStep = null;
+        this.parseRecipient();
         this.backBtn.addEventListener('click', () => this.back());
         this.init();
+    }
+
+    // Read ?to=Name from the URL (you set this when you share the link — nobody is asked).
+    parseRecipient() {
+        const raw = new URLSearchParams(window.location.search).get('to') || '';
+        let name = raw.trim().replace(/[<>]/g, '').slice(0, 40); // sanitize + cap length
+        if (name) {
+            name = name.charAt(0).toUpperCase() + name.slice(1);
+            AppState.recipient = name;
+            document.title = `For ${name} ❤️`;
+        }
     }
 
     init() {
@@ -422,6 +435,12 @@ class UIController {
     bindInviteEvents() {
         const btnYes = document.getElementById('btnYes');
         const btnNo = document.getElementById('btnNo');
+
+        // Personalize the question if the link carried a name (?to=Name).
+        if (AppState.recipient) {
+            const title = document.getElementById('inviteTitle');
+            if (title) title.innerText = `${AppState.recipient}, will you go on a date with me? 🌸`;
+        }
 
         this.dodge = new DodgeMechanic(btnNo);
 
@@ -607,13 +626,18 @@ class UIController {
                 if (past && opt.selected) timeSelect.selectedIndex = 0;
             }
         };
-        dateInput.addEventListener('change', filterTimes);
+        // Show/hide the "Choose date" hint depending on whether a date is set.
+        const dateField = dateInput.closest('.date-field');
+        const syncDateHint = () => { if (dateField) dateField.classList.toggle('empty', !dateInput.value); };
+        dateInput.addEventListener('change', () => { filterTimes(); syncDateHint(); });
+        dateInput.addEventListener('input', syncDateHint);
 
         // Restore previous choices when arriving via Back, then filter — filterTimes()
         // resets the selection to the placeholder if that slot has since passed.
         if (AppState.date) dateInput.value = AppState.date;
         if (AppState.time) timeSelect.value = AppState.time;
         filterTimes();
+        syncDateHint();
 
         document.getElementById('btnNextDateTime').addEventListener('click', () => {
             const dateVal = dateInput.value;

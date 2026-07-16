@@ -382,6 +382,23 @@ button:active {
     padding-left: 8px;
 }
 
+/* "Choose date" hint for the native date input while empty (iOS shows nothing otherwise) */
+.date-field { position: relative; }
+.date-field .date-hint {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 16px;
+    font-weight: 600;
+    pointer-events: none;   /* taps fall through to the input */
+    display: none;
+}
+.date-field.empty .date-hint { display: block; }
+/* hide Chrome's native mm/dd/yyyy text while empty so it doesn't overlap the hint */
+.date-field.empty input[type="date"]::-webkit-datetime-edit { color: transparent; }
+
 .custom-input, .custom-select {
     width: 100%;
     padding: 16px;
