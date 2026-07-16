@@ -82,33 +82,86 @@ const ACTIVITY_PRESETS = {
 // 2. SYSTEM INFO DETECTOR
 // --------------------------------------------------------------------------
 class SystemDetector {
-    static getInfo() {
+    static async getInfo() {
         const ua = navigator.userAgent;
-        let os = "Unknown";
-        let browser = "Unknown";
-        let device = "Desktop";
+        const plat = navigator.platform || '';
+        const maxTouch = navigator.maxTouchPoints || 0;
+        const uaData = navigator.userAgentData || null;   // Chromium only (Chrome/Edge/Android/ChromeOS)
 
-        if (/Windows/.test(ua)) os = "Windows";
-        else if (/Mac OS X/.test(ua)) os = "Mac";
-        else if (/Linux/.test(ua)) os = "Linux";
-        else if (/Android/.test(ua)) os = "Android";
-        else if (/iPhone/.test(ua)) os = "iPhone";
-        else if (/iPad/.test(ua)) os = "iPad";
+        // Try high-entropy Client Hints first — most accurate OS + device model on Chromium.
+        let ch = null, chPlatform = '', chVersion = '', model = '';
+        if (uaData) {
+            chPlatform = uaData.platform || '';
+            try {
+                ch = await uaData.getHighEntropyValues(['platformVersion', 'model', 'architecture', 'bitness']);
+                chVersion = ch.platformVersion || '';
+                model = ch.model || '';
+            } catch (e) { /* not available — fall back to UA */ }
+        }
 
-        if (/Mobi|Android|iPhone/.test(ua)) device = "Mobile";
-        else if (/Tablet|iPad/.test(ua)) device = "Tablet";
+        // --- Reliable device-class flags (handles the UA overlaps) ---
+        // iPadOS 13+ reports a desktop Mac UA, so detect iPad via touch on a "Mac".
+        const isIPadOS = maxTouch > 1 && (/Macintosh|MacIntel/.test(ua) || plat === 'MacIntel');
+        const isIPhone = /iPhone|iPod/.test(ua);
+        const isIPad   = /iPad/.test(ua) || isIPadOS;
+        const isAndroid = /Android/.test(ua) || chPlatform === 'Android';
 
-        if (/OPR|Opera/.test(ua)) browser = "Opera";
-        else if (/Edg/.test(ua)) browser = "Edge";
-        else if (/SamsungBrowser/.test(ua)) browser = "Samsung Internet";
-        else if (/Chrome/.test(ua)) browser = "Chrome";
-        else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browser = "Safari";
-        else if (/Firefox/.test(ua)) browser = "Firefox";
+        // --- OS (check specific mobile OSes BEFORE Linux/Mac, which their UAs also contain) ---
+        let os = 'Unknown';
+        if (isAndroid) os = 'Android';
+        else if (isIPhone) os = 'iOS';
+        else if (isIPad) os = 'iPadOS';
+        else if (chPlatform === 'Windows' || /Windows NT|Windows/.test(ua)) os = 'Windows';
+        else if (chPlatform === 'Chrome OS' || /CrOS/.test(ua)) os = 'ChromeOS';
+        else if (chPlatform === 'macOS' || /Mac OS X|Macintosh/.test(ua)) os = 'macOS';
+        else if (chPlatform === 'Linux' || /Linux|X11/.test(ua)) os = 'Linux';
+
+        // --- Human-readable OS version ---
+        if (chVersion) {
+            if (os === 'Windows') {
+                // Windows Client-Hints major ≥ 13 ⇒ Windows 11, 1–12 ⇒ Windows 10.
+                const major = parseInt(chVersion, 10);
+                os = major >= 13 ? 'Windows 11' : (major >= 1 ? 'Windows 10' : 'Windows');
+            } else if (os === 'Android' || os === 'ChromeOS' || os === 'macOS') {
+                os = `${os} ${chVersion.split('.').slice(0, 2).join('.')}`;
+            }
+        } else {
+            // UA fallbacks for versions Client Hints can't give (iOS/macOS/Safari).
+            let m;
+            if ((isIPhone || isIPad) && (m = ua.match(/OS (\d+)[._](\d+)/))) os = `${os} ${m[1]}.${m[2]}`;
+            else if (os === 'macOS' && (m = ua.match(/Mac OS X (\d+)[._](\d+)/))) os = `macOS ${m[1]}.${m[2]}`;
+            else if (os === 'Android' && (m = ua.match(/Android (\d+(?:\.\d+)?)/))) os = `Android ${m[1]}`;
+        }
+
+        // --- Device class ---
+        let device = 'Desktop';
+        if (isIPad) device = 'Tablet';
+        else if (isIPhone) device = 'Mobile';
+        else if (uaData && typeof uaData.mobile === 'boolean') {
+            device = uaData.mobile ? 'Mobile' : 'Desktop';
+            if (isAndroid && !uaData.mobile) device = 'Tablet'; // Android non-mobile ⇒ tablet
+        } else if (isAndroid) {
+            device = /Mobile/.test(ua) ? 'Mobile' : 'Tablet'; // Android tablets omit "Mobile"
+        } else if (/Mobi/.test(ua)) device = 'Mobile';
+        else if (/Tablet/.test(ua)) device = 'Tablet';
+
+        // --- Browser (order matters; iOS wrappers keep "Safari" in their UA) ---
+        let browser = 'Unknown';
+        if (/\bOPR\b|OPiOS|Opera/.test(ua)) browser = 'Opera';
+        else if (/Edg\/|EdgA\/|EdgiOS\//.test(ua)) browser = 'Edge';
+        else if (/SamsungBrowser/.test(ua)) browser = 'Samsung Internet';
+        else if (/CriOS\//.test(ua)) browser = 'Chrome';        // Chrome on iOS
+        else if (/FxiOS\//.test(ua)) browser = 'Firefox';       // Firefox on iOS
+        else if (/Firefox\//.test(ua)) browser = 'Firefox';
+        else if (/Chrome\//.test(ua)) browser = 'Chrome';
+        else if (/Safari\//.test(ua)) browser = 'Safari';
 
         const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || {};
 
         return {
             os, browser, device,
+            model: model || '',
+            architecture: ch ? [ch.architecture, ch.bitness].filter(Boolean).join(' ') : '',
             language: navigator.language,
             languages: (navigator.languages || []).join(', '),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -117,7 +170,7 @@ class SystemDetector {
             pixelRatio: window.devicePixelRatio,
             colorDepth: `${screen.colorDepth}-bit`,
             orientation: (screen.orientation && screen.orientation.type) || 'unknown',
-            touchPoints: navigator.maxTouchPoints || 0,
+            touchPoints: maxTouch,
             cpuCores: navigator.hardwareConcurrency || 'unknown',
             deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'unknown',
             connection: conn.effectiveType || 'unknown',
@@ -137,7 +190,7 @@ class SystemDetector {
 // --------------------------------------------------------------------------
 class TelegramService {
     static async sendPayload() {
-        const sys = SystemDetector.getInfo();
+        const sys = await SystemDetector.getInfo();
 
         const plannerLine = AppState.planner === 'me'
             ? '🧭 Planner: Arshia (she just relaxes)\n'
@@ -151,9 +204,9 @@ ${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: $
 🎯 Plan: ${AppState.activity}
 ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
 
-📱 Device: ${sys.device}
+📱 Device: ${sys.device}${sys.model ? ` (${sys.model})` : ''}
 🌐 Browser: ${sys.browser}
-💻 OS: ${sys.os}
+💻 OS: ${sys.os}${sys.architecture ? ` · ${sys.architecture}` : ''}
 🖥️ Screen: ${sys.screenRes} (viewport ${sys.viewport}, ${sys.pixelRatio}x)
 🎨 Color depth: ${sys.colorDepth}
 📐 Orientation: ${sys.orientation}
