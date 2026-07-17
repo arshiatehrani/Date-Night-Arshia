@@ -800,7 +800,7 @@ class UIController {
 
         const params = new URLSearchParams({
             action: 'TEMPLATE',
-            text: `Date: ${AppState.activity}`,
+            text: `Date with Arshia ❤️ · ${AppState.activity}`,
             dates: `${fmt(start)}/${fmt(end)}`,
             details: details,
             location: 'Kingston, Ontario'
