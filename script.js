@@ -682,8 +682,11 @@ class UIController {
         // Show/hide the "Choose date" hint depending on whether a date is set.
         const dateField = dateInput.closest('.date-field');
         const syncDateHint = () => { if (dateField) dateField.classList.toggle('empty', !dateInput.value); };
-        dateInput.addEventListener('change', () => { filterTimes(); syncDateHint(); });
+        // Mute the time dropdown while it still shows the "Choose time" placeholder.
+        const syncTimeHint = () => timeSelect.classList.toggle('is-empty', !timeSelect.value);
+        dateInput.addEventListener('change', () => { filterTimes(); syncDateHint(); syncTimeHint(); });
         dateInput.addEventListener('input', syncDateHint);
+        timeSelect.addEventListener('change', syncTimeHint);
 
         // Restore previous choices when arriving via Back, then filter — filterTimes()
         // resets the selection to the placeholder if that slot has since passed.
@@ -691,6 +694,7 @@ class UIController {
         if (AppState.time) timeSelect.value = AppState.time;
         filterTimes();
         syncDateHint();
+        syncTimeHint();
 
         document.getElementById('btnNextDateTime').addEventListener('click', () => {
             const dateVal = dateInput.value;

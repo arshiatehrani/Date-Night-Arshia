@@ -446,6 +446,18 @@ button:active {
     box-shadow: 0 0 0 4px rgba(255, 71, 126, 0.15);
 }
 
+/* Consistent placeholder styling across every field (matches the "Choose date" hint) */
+.custom-input::placeholder,
+.custom-textarea::placeholder {
+    color: var(--text-muted);
+    font-weight: 600;
+    opacity: 1;
+}
+/* Mute the time dropdown while it shows the "Choose time" placeholder */
+.custom-select.is-empty {
+    color: var(--text-muted);
+}
+
 .select-wrapper {
     position: relative;
 }
