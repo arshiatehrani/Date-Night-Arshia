@@ -14,15 +14,15 @@ picks an activity, food, date/time, and an excitement level — and when they hi
 
 ```mermaid
 flowchart LR
-  subgraph Browser["Recipient's browser — GitHub Pages"]
-    Page["index.html · script.js · style.css"]
-    Cal["Add to Google Calendar<br/>(link built in the browser)"]
+  subgraph Browser["Recipient device - GitHub Pages"]
+    Page["index.html, script.js, style.css"]
+    Cal["Add to Google Calendar link<br/>built in the browser"]
   end
 
-  Worker["Cloudflare Worker<br/>secret-keeping proxy<br/>holds BOT_TOKEN + CHAT_ID"]
-  TG["Telegram<br/>your chat"]
+  Worker["Cloudflare Worker<br/>secret-keeping proxy<br/>holds BOT_TOKEN and CHAT_ID"]
+  TG["Telegram - your chat"]
 
-  Page -->|"GET ?text=…"| Worker
+  Page -->|"sends the answer"| Worker
   Worker -->|"Bot API"| TG
   Page -.->|"click on final screen"| Cal
 ```
@@ -181,6 +181,19 @@ other devices, and adding an emoji-image library would *override* the nice Apple
 on an iPhone.)
 
 ---
+
+## Personalized links & location
+
+- **Tag who you send it to** — append `?to=Name` to the link, e.g.
+  `https://<user>.github.io/<repo>/?to=Sarah`. The page then greets them by name
+  ("Sarah, will you go on a date with me?"), sets the tab title, and includes
+  **`👤 Invited: Sarah`** in your Telegram message. Without `?to=`, everything works
+  as a generic invite. (Parsed in `parseRecipient()` in `script.js`.)
+- **Approximate location** — the Cloudflare Worker adds the visitor's approximate
+  **city / region / country**, postal code, a Google Maps pin, and IP to the Telegram
+  message, using Cloudflare's built-in `request.cf` geo. This is **city-level, not a
+  precise neighborhood**, and requires re-deploying `worker.js` in Cloudflare after
+  changes.
 
 ## Notes
 
