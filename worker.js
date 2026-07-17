@@ -1,20 +1,21 @@
 /**
  * Cloudflare Worker — Telegram + automatic Google Calendar (with availability check).
  *
- * Copy this into your Cloudflare Worker (Edit code) and Deploy. Set these secrets in
- * Settings -> Variables and Secrets:
+ * Secrets (Settings -> Variables and Secrets):
+ *   Required (Telegram):   BOT_TOKEN, CHAT_ID
+ *   Optional (calendar):   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN
+ *                          EVENT_TIMEZONE (optional, defaults to "America/Toronto")
  *
- *   Required (Telegram):
- *     BOT_TOKEN, CHAT_ID
- *   Optional (auto add-to-calendar + availability check). If absent, only Telegram fires:
- *     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN
- *     EVENT_TIMEZONE  (optional, defaults to "America/Toronto")
+ * IMPORTANT: the refresh token must be authorized for the FULL calendar scope
+ *   https://www.googleapis.com/auth/calendar
+ * (the narrower calendar.events scope canNOT run free/busy or list calendars).
  *
  * Flow when the calendar is configured:
- *   1) Check your calendar for a conflict in the proposed window (free/busy).
- *   2) If BUSY  -> return { conflict: true }; do NOT create the event or send Telegram.
- *   3) If FREE  -> send the Telegram message AND create the event on your calendar.
- * If the check errors, it fails OPEN (treats you as free) so a hiccup never blocks a date.
+ *   1) List ALL your calendars, run a free/busy check across them for the window.
+ *   2) If BUSY on any -> return { conflict: true }; do NOT create the event or Telegram.
+ *   3) If FREE        -> send Telegram AND create the event on your primary calendar.
+ * The check fails OPEN (proceeds) only on a network/parse error — but real API errors
+ * are reported to Telegram so misconfig is visible instead of silently ignored.
  */
 export default {
   async fetch(request, env) {
@@ -51,7 +52,7 @@ export default {
     const canCal = env.GOOGLE_REFRESH_TOKEN && env.GOOGLE_CLIENT_ID &&
                    env.GOOGLE_CLIENT_SECRET && evTitle && evStart && evEnd;
 
-    // --- Get a Google access token (needed for both the availability check and insert) ---
+    // --- Access token (needed for calendar list, free/busy, and insert) ---
     let accessToken = null;
     if (canCal) {
       try {
@@ -71,21 +72,41 @@ export default {
       } catch (e) { accessToken = null; }
     }
 
-    // --- 1) Availability check (free/busy). Fails OPEN on error. ---
+    const authHeaders = { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" };
+
+    // --- 1) Availability check across ALL calendars ---
     if (canCal && accessToken) {
       try {
+        // Enumerate every calendar we can at least read free/busy for.
+        let items = [{ id: "primary" }];
+        try {
+          const cl = await fetch(
+            "https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=freeBusyReader&maxResults=250",
+            { headers: authHeaders }
+          );
+          const clj = await cl.json();
+          if (clj.error) { try { await tgSend(`⚠️ Calendar list error: ${JSON.stringify(clj.error).slice(0, 300)}`); } catch (e) {} }
+          if (Array.isArray(clj.items) && clj.items.length) items = clj.items.map((c) => ({ id: c.id }));
+        } catch (e) { /* fall back to primary only */ }
+
         const fb = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
           method: "POST",
-          headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ timeMin: evStart, timeMax: evEnd, items: [{ id: "primary" }] })
+          headers: authHeaders,
+          body: JSON.stringify({ timeMin: evStart, timeMax: evEnd, items })
         });
         const fbj = await fb.json();
-        const busy = fbj && fbj.calendars && fbj.calendars.primary && fbj.calendars.primary.busy;
-        if (Array.isArray(busy) && busy.length > 0) {
-          // Conflict — don't finalize. Tell the page so it asks her for another time.
+        if (fbj.error) { try { await tgSend(`⚠️ Free/busy error (calendar not checked): ${JSON.stringify(fbj.error).slice(0, 300)}`); } catch (e) {} }
+
+        const cals = fbj.calendars || {};
+        let busy = false;
+        for (const id in cals) {
+          const b = cals[id] && cals[id].busy;
+          if (Array.isArray(b) && b.length > 0) { busy = true; break; }
+        }
+        if (busy) {
           return json({ conflict: true, telegramOk: false, calendarOk: false });
         }
-      } catch (e) { /* fail-open: treat as free */ }
+      } catch (e) { /* fail-open on network/parse errors */ }
     }
 
     // --- 2) No conflict → send Telegram ---
@@ -106,7 +127,7 @@ export default {
         };
         const cr = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
           method: "POST",
-          headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify(event)
         });
         calendarOk = cr.ok;
