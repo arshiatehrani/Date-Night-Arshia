@@ -434,7 +434,8 @@ input[type="date"] {
 input[type="date"]::selection { background: transparent; }
 /* While empty, hide the placeholder segments entirely so nothing shows behind our hint */
 .date-field.empty input[type="date"] { color: transparent; }
-.date-field.empty input[type="date"]::-webkit-datetime-edit { color: transparent; }
+/* Remove the yyyy/mm/dd segments entirely while empty, so there's nothing to select/highlight. */
+.date-field.empty input[type="date"]::-webkit-datetime-edit { display: none; }
 
 .custom-input, .custom-select {
     width: 100%;
