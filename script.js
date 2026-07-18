@@ -79,8 +79,8 @@ const ACTIVITY_PRESETS = {
     picnic:     ['Lakeside picnic 🌊', 'Park picnic 🌳', 'Sunset picnic 🌇', 'Cheese & wine 🧀']
 };
 
-// Cute/flirty teases shown when she keeps chasing the "NO" button — one per 10 tries.
-// Generic enough for a first date or a hundredth.
+// Cute/flirty teases shown when she keeps chasing the "NO" button — one per 5 tries.
+// 20 lines => fresh all the way to 100 touches. Generic for a first date or a hundredth.
 const NO_TEASES = [
     "Nice try 😏 — but that 'No' is feeling shy today.",
     "You can chase that button all night, cutie. 💕",
@@ -91,7 +91,17 @@ const NO_TEASES = [
     "Impressive stamina… promising for our date. 😉",
     "The 'No' button is allergic to your finger. 🤧",
     "Careful — all this chasing counts as flirting. 💘",
-    "Okay, you win the effort award. Now hit YES. ✨"
+    "Okay, you win the effort award. Now hit YES. ✨",
+    "Still no luck? The button's shy — I'm not. 😌",
+    "You + that button = the slowest chase scene ever. 💨",
+    "Fun fact: every tap just makes me smile more. 😊",
+    "It keeps running… it wants you to work for it. 😏",
+    "Ten out of ten for persistence, still no 'No'. 😆",
+    "Are we flirting yet? Feels like we're flirting. 😉",
+    "That button's cardio is better than mine. 😅",
+    "Give up on 'No' — 'Yes' gives way better hugs. 🤗",
+    "You're kind of cute when you're stubborn. 😍",
+    "Last call: 'No' retired. 'Yes' is right there. 💗"
 ];
 
 // --------------------------------------------------------------------------
@@ -622,8 +632,8 @@ class UIController {
         // Tease her when she keeps chasing "NO" — a new cute line every 10 tries.
         const tease = document.getElementById('noTease');
         const onTry = (tries) => {
-            if (!tease || tries < 10 || tries % 10 !== 0) return;
-            tease.innerText = NO_TEASES[(tries / 10 - 1) % NO_TEASES.length];
+            if (!tease || tries < 5 || tries % 5 !== 0) return;
+            tease.innerText = NO_TEASES[(tries / 5 - 1) % NO_TEASES.length];
             tease.classList.remove('pop');
             void tease.offsetWidth; // restart the little pop animation
             tease.classList.add('pop');
