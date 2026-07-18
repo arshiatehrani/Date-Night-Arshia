@@ -120,7 +120,8 @@ export default {
             if (me && me.responseStatus === "declined") return false;
           }
           const s = Date.parse(ev.start.dateTime);
-          const e = Date.parse((ev.end && ev.end.dateTime) || ev.start.dateTime);
+          let e = Date.parse((ev.end && ev.end.dateTime) || ev.start.dateTime);
+          if (!(e > s)) e = s + 60000; // zero-duration "deadline"/point event -> treat as a 1-min block
           return s < endMs && e > startMs; // overlaps the proposed window
         };
         const perCal = await Promise.all(items.map(async (it) => {
@@ -133,7 +134,7 @@ export default {
             const evs = Array.isArray(j.items) ? j.items : [];
             return {
               id: it.id, ok: true, busy: evs.some(blocks),
-              events: evs.map((e) => ({ summary: e.summary, transparency: e.transparency, status: e.status, start: e.start && (e.start.dateTime || e.start.date) }))
+              events: evs.map((e) => ({ summary: e.summary, transparency: e.transparency, status: e.status, start: e.start && (e.start.dateTime || e.start.date), end: e.end && (e.end.dateTime || e.end.date) }))
             };
           } catch (e) { return { id: it.id, ok: false, busy: false, events: [] }; }
         }));
