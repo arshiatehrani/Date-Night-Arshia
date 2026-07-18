@@ -79,6 +79,21 @@ const ACTIVITY_PRESETS = {
     picnic:     ['Lakeside picnic 🌊', 'Park picnic 🌳', 'Sunset picnic 🌇', 'Cheese & wine 🧀']
 };
 
+// Cute/flirty teases shown when she keeps chasing the "NO" button — one per 10 tries.
+// Generic enough for a first date or a hundredth.
+const NO_TEASES = [
+    "Nice try 😏 — but that 'No' is feeling shy today.",
+    "You can chase that button all night, cutie. 💕",
+    "Persistent! I already like where this is going. 😍",
+    "Aww, still going? Just tap YES already. 🥰",
+    "That button has commitment issues. YES doesn't. 💖",
+    "Plot twist: there is no 'No'. 😘",
+    "Impressive stamina… promising for our date. 😉",
+    "The 'No' button is allergic to your finger. 🤧",
+    "Careful — all this chasing counts as flirting. 💘",
+    "Okay, you win the effort award. Now hit YES. ✨"
+];
+
 // --------------------------------------------------------------------------
 // 2. SYSTEM INFO DETECTOR
 // --------------------------------------------------------------------------
@@ -410,8 +425,11 @@ const Particles = new ParticleEngine();
 // smooth glide (CSS transition on left/top), not a jittery per-pixel jump.
 // --------------------------------------------------------------------------
 class DodgeMechanic {
-    constructor(btnElement) {
+    constructor(btnElement, onTry) {
         this.btn = btnElement;
+        this.onTry = onTry || null; // called with the running "try" count
+        this.tries = 0;
+        this.lastTry = 0;
         this.playfield = document.getElementById('main-card'); // stays inside the card = always visible
         this.hitMargin = 12;    // px: only flee when the cursor is basically on the button (small margin)
         this.step = 150;        // px: gentle move distance (no big teleports)
@@ -470,6 +488,14 @@ class DodgeMechanic {
     }
 
     flee(cx, cy) {
+        // Count a "try" — debounced so one continuous lunge isn't counted many times.
+        const now = Date.now();
+        if (now - this.lastTry > 300) {
+            this.lastTry = now;
+            this.tries += 1;
+            if (this.onTry) this.onTry(this.tries);
+        }
+
         const b = this.bounds();
         const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
         const r = this.rect();
@@ -593,7 +619,16 @@ class UIController {
             if (title) title.innerText = `${AppState.recipient}, will you go on a date with me? 🌸`;
         }
 
-        this.dodge = new DodgeMechanic(btnNo);
+        // Tease her when she keeps chasing "NO" — a new cute line every 10 tries.
+        const tease = document.getElementById('noTease');
+        const onTry = (tries) => {
+            if (!tease || tries < 10 || tries % 10 !== 0) return;
+            tease.innerText = NO_TEASES[(tries / 10 - 1) % NO_TEASES.length];
+            tease.classList.remove('pop');
+            void tease.offsetWidth; // restart the little pop animation
+            tease.classList.add('pop');
+        };
+        this.dodge = new DodgeMechanic(btnNo, onTry);
 
         btnYes.addEventListener('click', () => {
             this.show('tpl-activity', this.bindActivityEvents.bind(this));

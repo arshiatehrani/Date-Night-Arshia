@@ -307,6 +307,32 @@ button:active {
     transform: translateX(-50%) scale(1.08);
 }
 
+/* Keep the YES button centered while pressed — otherwise the global active-scale drops
+   translateX(-50%), the button jumps sideways, and it "dodges" its own click. */
+.btn-yes:active {
+    transform: translateX(-50%) scale(0.95) !important;
+}
+
+/* Teasing message shown when she keeps trying to hit "NO" */
+.no-tease {
+    margin-top: 14px;
+    min-height: 1.3em;
+    font-family: var(--font-family);
+    font-size: 14px;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--primary);
+    line-height: 1.4;
+    transition: opacity var(--transition-hover);
+}
+.no-tease.pop {
+    animation: teasePop 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+@keyframes teasePop {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .btn-no {
     position: absolute;
     left: 50%;
