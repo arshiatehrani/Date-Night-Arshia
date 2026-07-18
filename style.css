@@ -460,8 +460,9 @@ input[type="date"] {
 input[type="date"]::selection { background: transparent; }
 /* While empty, hide the placeholder segments entirely so nothing shows behind our hint */
 .date-field.empty input[type="date"] { color: transparent; }
-/* Remove the yyyy/mm/dd segments entirely while empty, so there's nothing to select/highlight. */
-.date-field.empty input[type="date"]::-webkit-datetime-edit { display: none; }
+/* Hide the yyyy/mm/dd segments while empty WITHOUT collapsing their box — nothing paints
+   (so no selection highlight), but the calendar icon keeps its spot on the right. */
+.date-field.empty input[type="date"]::-webkit-datetime-edit { visibility: hidden; }
 
 .custom-input, .custom-select {
     width: 100%;
