@@ -85,7 +85,7 @@ const ACTIVITY_PRESETS = {
 // 1,000+ touches before it loops. Generic for a first date or a hundredth.
 const NO_TEASES = [
     "Nice try 😏 — but that 'No' is feeling shy today.",
-    "You can chase that button all night, cutie. 💕",
+    "You can chase that button all {daypart}, cutie. 💕",
     "Persistent! I already like where this is going. 😍",
     "Aww, still going? Just tap YES already. 🥰",
     "That button has commitment issues. YES doesn't. 💖",
@@ -881,7 +881,9 @@ class UIController {
         const tease = document.getElementById('noTease');
         const onTry = (tries) => {
             if (!tease || tries < 5 || tries % 5 !== 0) return;
-            tease.innerText = NO_TEASES[(tries / 5 - 1) % NO_TEASES.length];
+            const hr = new Date().getHours();
+            const daypart = (hr >= 6 && hr < 18) ? 'day' : 'night'; // her local time
+            tease.innerText = NO_TEASES[(tries / 5 - 1) % NO_TEASES.length].replace('{daypart}', daypart);
             tease.classList.remove('pop');
             void tease.offsetWidth; // restart the little pop animation
             tease.classList.add('pop');
