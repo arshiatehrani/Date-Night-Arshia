@@ -934,7 +934,6 @@ class UIController {
         this.buildCalendarLink();
         this.startCountdown();
         this.loadWeather();
-        this.buildVenueLink();
 
         // Build a diverse, activity-relevant emoji theme for the rain.
         let theme = (ACTIVITY_EMOJIS[AppState.activityKey] || ACTIVITY_EMOJIS.default).slice();
@@ -1005,15 +1004,6 @@ class UIController {
         } catch (e) { /* forecast unavailable (too far out or offline) — just hide it */ }
     }
 
-    // "Find spots" link — a Google Maps search for the activity in Kingston.
-    buildVenueLink() {
-        const link = document.getElementById('venueLink');
-        if (!link) return;
-        // Strip trailing emoji/symbols from the activity for a cleaner search.
-        const term = (AppState.activity || 'date').replace(/[^\p{L}\p{N}\s/&+-]/gu, '').trim() || 'date';
-        link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(term + ' Kingston Ontario')}`;
-        link.style.display = 'inline-block';
-    }
 }
 
 // --------------------------------------------------------------------------
