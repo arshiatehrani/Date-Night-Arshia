@@ -201,11 +201,20 @@ When enabled, the Worker creates the date on **your** Google Calendar automatica
 moment she submits (in addition to Telegram) — no taps from anyone. It's optional: if the
 Google secrets below aren't set, the Worker just skips this step.
 
-**Availability check:** before creating the event, the Worker runs a free/busy check on
-your calendar for that time window. If you already have a conflicting event, it does *not*
-create the event or send the Telegram — instead it returns `{ conflict: true }` and the
-page asks her to pick another time. (The check fails *open*: if it errors, the date still
-goes through, so a hiccup never wrongly blocks you.)
+**Availability check:** before creating the event, the Worker checks your **entire**
+calendar set (General, group, and imported/Outlook calendars) for that window, via both
+free/busy and `events.list` (the latter catches subscribed calendars + zero-duration
+"deadline" events). If you're busy it returns `{ conflict: true }` — no event, no Telegram
+— and the page asks her to pick another time. Fails *open* on error so a hiccup never
+wrongly blocks a real date.
+
+**Free-time greying (proactive):** when she picks a date, the page calls the Worker's
+`?availability=1&dayStart=…&dayEnd=…` endpoint (returns `{ busy: [{start,end}] }`) and
+**greys out the time slots you're not free**, so she rarely hits a conflict at all.
+
+**Extras:** the final screen shows a live countdown to the date, a weather forecast for the
+day (free Open-Meteo API, when within range), and a "find spots in Kingston" maps link.
+She can also leave a short note that comes through in your Telegram + the calendar event.
 
 Set these extra secrets on the Worker (Settings → Variables and Secrets), then paste the
 latest [`worker.js`](worker.js) and Deploy:

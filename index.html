@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
 
     <!-- Core Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -186,7 +186,11 @@
                     <span>SUPER EXCITED!</span>
                 </div>
             </div>
-            <button class="btn-primary mt-30 w-100" id="btnFinish">Send Invitation 💌</button>
+            <div class="form-group mt-20">
+                <label for="dateNote">Leave me a little note (optional)</label>
+                <input type="text" id="dateNote" class="custom-input" placeholder="Can't wait! 🥰" maxlength="200">
+            </div>
+            <button class="btn-primary mt-20 w-100" id="btnFinish">Send Invitation 💌</button>
         </div>
     </template>
 
@@ -203,12 +207,15 @@
         <div class="view scale-in">
             <h1 class="final-title glow-text">❤️ It's a date! ❤️</h1>
             <p class="final-desc">The invitation has been successfully sent.</p>
-            
+
+            <p id="final-countdown" class="countdown-text"></p>
+
             <div class="summary-card mt-20">
                 <p><strong>Plan:</strong> <span id="final-activity"></span></p>
                 <p id="food-summary-row" style="display:none;"><strong>Food:</strong> <span id="final-food"></span></p>
                 <p id="notes-summary-row" style="display:none;"><strong>Notes:</strong> <span id="final-notes"></span></p>
                 <p><strong>When:</strong> <span id="final-time"></span></p>
+                <p id="weather-row" style="display:none;"><strong>Forecast:</strong> <span id="final-weather"></span></p>
             </div>
 
             <div class="bot-reminder-box mt-30">
@@ -216,11 +223,12 @@
                 <a href="#" id="gcalLink" target="_blank" rel="noopener" class="btn-gcal">
                     <span>📅 Add to Google Calendar</span>
                 </a>
+                <a href="#" id="venueLink" target="_blank" rel="noopener" class="btn-link mt-10" style="display:none;">📍 Find spots in Kingston</a>
             </div>
         </div>
     </template>
 
     <!-- Core Logic -->
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>

@@ -21,6 +21,7 @@ const AppState = {
     foodEmojis: [],
     planner: null,          // 'me' | 'her' | null
     planNotes: null,
+    dateNote: null,         // a little note she can leave you
     excitement: 50,
     emojiTheme: ['❤️']
 };
@@ -194,6 +195,34 @@ function fmtTime12(t) {
     return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+// The Cloudflare Worker endpoint (Telegram + calendar + availability).
+const WORKER_URL = "https://date-night-arshia.arshia-tehrani1380.workers.dev/";
+
+// Dates/times are interpreted in the date's timezone (Kingston = America/Toronto).
+const EVENT_TZ = 'America/Toronto';
+function tzOffsetMinutes(dateObj) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+        timeZone: EVENT_TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    const q = {};
+    for (const part of dtf.formatToParts(dateObj)) q[part.type] = part.value;
+    const asUTC = Date.UTC(+q.year, +q.month - 1, +q.day, +q.hour, +q.minute, +q.second);
+    return Math.round((asUTC - dateObj.getTime()) / 60000); // minutes, negative = west
+}
+// UTC-offset string (e.g. "-04:00") for a Toronto wall-clock moment.
+function tzOffsetString(y, mo, d, h, m) {
+    let off = tzOffsetMinutes(new Date(Date.UTC(y, mo - 1, d, h, m)));
+    const sign = off <= 0 ? '-' : '+';
+    off = Math.abs(off);
+    return `${sign}${String(Math.floor(off / 60)).padStart(2, '0')}:${String(off % 60).padStart(2, '0')}`;
+}
+// Epoch ms for a Toronto wall-clock time.
+function tzMs(y, mo, d, h, m) {
+    const approx = Date.UTC(y, mo - 1, d, h, m);
+    return approx - tzOffsetMinutes(new Date(approx)) * 60000;
+}
+
 // --------------------------------------------------------------------------
 // GOOGLE CALENDAR LINK BUILDER (shared)
 // `withName` = who the date is "with" from the calendar owner's point of view.
@@ -213,29 +242,14 @@ function calendarFields(withName) {
     const details = `Our date! Plan: ${AppState.activity}` +
         (AppState.food ? ` | Food: ${AppState.food}` : '') +
         (AppState.planNotes ? ` | Notes: ${AppState.planNotes}` : '') +
+        (AppState.dateNote ? ` | Her note: ${AppState.dateNote}` : '') +
         ` | Excitement: ${AppState.excitement}/100 💕`;
 
-    // The picked clock time is meant in the date's timezone (Kingston = America/Toronto).
-    const TZ = 'America/Toronto';
-    // Toronto's UTC offset (e.g. "-04:00") for that wall-clock moment (handles DST).
-    const offsetStr = (wall) => {
-        const approx = new Date(Date.UTC(wall.getFullYear(), wall.getMonth(), wall.getDate(), wall.getHours(), wall.getMinutes()));
-        const dtf = new Intl.DateTimeFormat('en-US', {
-            timeZone: TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
-        const q = {};
-        for (const part of dtf.formatToParts(approx)) q[part.type] = part.value;
-        const asUTC = Date.UTC(+q.year, +q.month - 1, +q.day, +q.hour, +q.minute, +q.second);
-        let off = Math.round((asUTC - approx.getTime()) / 60000); // minutes, negative = west
-        const sign = off <= 0 ? '-' : '+';
-        off = Math.abs(off);
-        return `${sign}${pad(Math.floor(off / 60))}:${pad(off % 60)}`;
-    };
-    // RFC3339 with offset, e.g. 2026-07-25T20:30:00-04:00 (absolute — for the Calendar API + free/busy).
+    // RFC3339 with Toronto offset, e.g. 2026-07-25T20:30:00-04:00 (absolute — for the Calendar API).
     const rfc = (dt) =>
         `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
-        `T${pad(dt.getHours())}:${pad(dt.getMinutes())}:00${offsetStr(dt)}`;
+        `T${pad(dt.getHours())}:${pad(dt.getMinutes())}:00` +
+        tzOffsetString(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes());
     // Compact "floating" form for the render URL, e.g. 20260725T203000.
     const compact = (dt) =>
         `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}` +
@@ -276,7 +290,7 @@ class TelegramService {
 ${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: ${AppState.date}
 🕒 Time: ${fmtTime12(AppState.time)}
 🎯 Plan: ${AppState.activity}
-${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
+${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}${AppState.dateNote ? `💌 Her note: ${AppState.dateNote}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
 📅 Add to your calendar: ${myCalUrl}
 
 📱 Device: ${sys.device}${sys.model ? ` (${sys.model})` : ''}
@@ -295,7 +309,7 @@ ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppSta
 🔗 Referrer: ${sys.referrer}
 🌐 URL: ${sys.url}`;
 
-        const workerURL = "https://date-night-arshia.arshia-tehrani1380.workers.dev/";
+        const workerURL = WORKER_URL;
 
         // Event fields for YOUR calendar — the Worker checks availability, then creates it.
         const f = calendarFields(AppState.recipient);
@@ -314,7 +328,7 @@ ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppSta
             return await resp.json().catch(() => ({ conflict: false }));
         } catch (error) {
             console.error("Transmission failed:", error);
-            return { conflict: false }; // fail-open: don't block on a network hiccup
+            return { error: true }; // hard network failure -> let the user retry
         }
     }
 }
@@ -753,23 +767,55 @@ class UIController {
 
         const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
-        // If the chosen day is today, hide/disable any time at or before "now".
-        const filterTimes = () => {
+        // Hint helpers.
+        const dateField = dateInput.closest('.date-field');
+        const syncDateHint = () => { if (dateField) dateField.classList.toggle('empty', !dateInput.value); };
+        const syncTimeHint = () => timeSelect.classList.toggle('is-empty', !timeSelect.value);
+
+        // A slot is unavailable if it's in the past (today) OR overlaps a busy calendar block.
+        let busyIntervals = []; // [{start, end}] epoch ms for the selected date
+        const slotBusy = (value) => {
+            if (!dateInput.value || !busyIntervals.length) return false;
+            const [y, mo, d] = dateInput.value.split('-').map(Number);
+            const [h, m] = value.split(':').map(Number);
+            const s = tzMs(y, mo, d, h, m);
+            const e = s + 2 * 60 * 60 * 1000; // 2-hour date
+            return busyIntervals.some((b) => s < b.end && e > b.start);
+        };
+        const applyTimeState = () => {
             const isToday = dateInput.value === todayStr;
             for (const opt of timeSelect.options) {
                 if (!opt.value) continue;
                 const past = isToday && toMin(opt.value) <= nowMin;
-                opt.disabled = past;
-                opt.hidden = past;
-                if (past && opt.selected) timeSelect.selectedIndex = 0;
+                const busy = slotBusy(opt.value);
+                opt.hidden = past;                         // past times disappear
+                opt.disabled = past || busy;               // busy times shown but not selectable
+                opt.text = fmtTime12(opt.value) + (busy ? ' — busy' : '');
+                if (opt.disabled && opt.selected) timeSelect.selectedIndex = 0;
             }
+            syncTimeHint();
         };
-        // Show/hide the "Choose date" hint depending on whether a date is set.
-        const dateField = dateInput.closest('.date-field');
-        const syncDateHint = () => { if (dateField) dateField.classList.toggle('empty', !dateInput.value); };
-        // Mute the time dropdown while it still shows the "Choose time" placeholder.
-        const syncTimeHint = () => timeSelect.classList.toggle('is-empty', !timeSelect.value);
-        dateInput.addEventListener('change', () => { filterTimes(); syncDateHint(); syncTimeHint(); });
+        // Ask the Worker which times you're busy on the chosen day, then grey those out.
+        const refreshAvailability = async () => {
+            busyIntervals = [];
+            const dv = dateInput.value;
+            if (dv) {
+                const [y, mo, d] = dv.split('-').map(Number);
+                try {
+                    const q = new URLSearchParams({
+                        availability: '1',
+                        dayStart: `${dv}T00:00:00${tzOffsetString(y, mo, d, 0, 0)}`,
+                        dayEnd: `${dv}T23:59:00${tzOffsetString(y, mo, d, 23, 59)}`
+                    });
+                    const r = await fetch(`${WORKER_URL}?${q.toString()}`);
+                    const j = await r.json();
+                    if (Array.isArray(j.busy)) busyIntervals = j.busy;
+                } catch (e) { /* fail-open: no greying; the submit-time check still guards */ }
+            }
+            applyTimeState();
+        };
+
+        dateInput.addEventListener('change', () => { applyTimeState(); syncDateHint(); refreshAvailability(); });
         dateInput.addEventListener('input', syncDateHint);
         timeSelect.addEventListener('change', syncTimeHint);
 
@@ -786,13 +832,12 @@ class UIController {
             try { dateInput.showPicker(); } catch (_) { /* already open or unsupported */ }
         });
 
-        // Restore previous choices when arriving via Back, then filter — filterTimes()
-        // resets the selection to the placeholder if that slot has since passed.
+        // Restore previous choices when arriving via Back, then apply state + fetch availability.
         if (AppState.date) dateInput.value = AppState.date;
         if (AppState.time) timeSelect.value = AppState.time;
-        filterTimes();
+        applyTimeState();
         syncDateHint();
-        syncTimeHint();
+        refreshAvailability();
 
         document.getElementById('btnNextDateTime').addEventListener('click', () => {
             const dateVal = dateInput.value;
@@ -808,6 +853,10 @@ class UIController {
             }
             if (dateVal === todayStr && toMin(timeVal) <= nowMin) {
                 alert("That time has already passed today — pick a later time! ⏰");
+                return;
+            }
+            if (slotBusy(timeVal)) {
+                alert("That time is taken on Arshia's calendar — pick a free one! 🗓️");
                 return;
             }
 
@@ -840,11 +889,21 @@ class UIController {
         render(AppState.excitement);
         slider.addEventListener('input', (e) => render(parseInt(e.target.value)));
 
+        const noteEl = document.getElementById('dateNote');
+        if (noteEl && AppState.dateNote) noteEl.value = AppState.dateNote; // restore on Back
+
         btnFinish.addEventListener('click', async () => {
+            AppState.dateNote = (noteEl && noteEl.value.trim()) || null; // capture her note
             this.backBtn.style.display = 'none'; // hide Back during the send (don't clear history)
             this.renderView('tpl-loading');      // transient, not a history step
             const result = await TelegramService.sendPayload();
 
+            if (result && result.error) {
+                // Network failure — don't show a false success; let her retry.
+                this.renderView('tpl-excitement', this.bindExcitementEvents.bind(this));
+                alert("Hmm — couldn't send just now. Check your connection and tap Send Invitation again. 💌");
+                return;
+            }
             if (result && result.conflict) {
                 // Arshia is busy then — don't finalize; send her back to pick another time.
                 this.back(); // top of the stack is the date/time step
@@ -873,6 +932,9 @@ class UIController {
         }
 
         this.buildCalendarLink();
+        this.startCountdown();
+        this.loadWeather();
+        this.buildVenueLink();
 
         // Build a diverse, activity-relevant emoji theme for the rain.
         let theme = (ACTIVITY_EMOJIS[AppState.activityKey] || ACTIVITY_EMOJIS.default).slice();
@@ -887,6 +949,70 @@ class UIController {
         // Her calendar: the date is "with Arshia".
         const link = document.getElementById('gcalLink');
         if (link) link.href = googleCalUrl('Arshia');
+    }
+
+    // Live "time until our date" countdown on the final screen.
+    startCountdown() {
+        const el = document.getElementById('final-countdown');
+        if (!el || !AppState.date || !AppState.time) return;
+        const [y, mo, d] = AppState.date.split('-').map(Number);
+        const [h, m] = AppState.time.split(':').map(Number);
+        const target = tzMs(y, mo, d, h, m);
+        const tick = () => {
+            let diff = target - Date.now();
+            if (diff <= 0) { el.innerText = '💕 It\'s date time! 💕'; return; }
+            const days = Math.floor(diff / 86400000); diff -= days * 86400000;
+            const hrs = Math.floor(diff / 3600000); diff -= hrs * 3600000;
+            const mins = Math.floor(diff / 60000);
+            const parts = [];
+            if (days) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+            parts.push(`${hrs} hr${hrs !== 1 ? 's' : ''}`);
+            parts.push(`${mins} min`);
+            el.innerText = `⏳ ${parts.join(', ')} until our date 💕`;
+        };
+        tick();
+        clearInterval(this._countdownTimer);
+        this._countdownTimer = setInterval(tick, 30000);
+    }
+
+    // Forecast for the date (free Open-Meteo API; only within its ~16-day window).
+    async loadWeather() {
+        if (!AppState.date) return;
+        const row = document.getElementById('weather-row');
+        const out = document.getElementById('final-weather');
+        if (!row || !out) return;
+        const CODES = {
+            0: '☀️ Clear', 1: '🌤️ Mostly clear', 2: '⛅ Partly cloudy', 3: '☁️ Cloudy',
+            45: '🌫️ Foggy', 48: '🌫️ Foggy', 51: '🌦️ Light drizzle', 53: '🌦️ Drizzle', 55: '🌧️ Drizzle',
+            61: '🌦️ Light rain', 63: '🌧️ Rain', 65: '🌧️ Heavy rain', 71: '🌨️ Light snow', 73: '🌨️ Snow',
+            75: '❄️ Heavy snow', 80: '🌦️ Showers', 81: '🌧️ Showers', 82: '⛈️ Heavy showers',
+            95: '⛈️ Thunderstorm', 96: '⛈️ Thunderstorm', 99: '⛈️ Thunderstorm'
+        };
+        try {
+            const u = `https://api.open-meteo.com/v1/forecast?latitude=44.23&longitude=-76.48` +
+                `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FToronto` +
+                `&start_date=${AppState.date}&end_date=${AppState.date}`;
+            const r = await fetch(u);
+            const j = await r.json();
+            const daily = j && j.daily;
+            if (daily && daily.time && daily.time.length) {
+                const code = CODES[daily.weather_code[0]] || '🌡️';
+                const hi = Math.round(daily.temperature_2m_max[0]);
+                const lo = Math.round(daily.temperature_2m_min[0]);
+                out.innerText = `${code}, ${lo}–${hi}°C`;
+                row.style.display = 'flex';
+            }
+        } catch (e) { /* forecast unavailable (too far out or offline) — just hide it */ }
+    }
+
+    // "Find spots" link — a Google Maps search for the activity in Kingston.
+    buildVenueLink() {
+        const link = document.getElementById('venueLink');
+        if (!link) return;
+        // Strip trailing emoji/symbols from the activity for a cleaner search.
+        const term = (AppState.activity || 'date').replace(/[^\p{L}\p{N}\s/&+-]/gu, '').trim() || 'date';
+        link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(term + ' Kingston Ontario')}`;
+        link.style.display = 'inline-block';
     }
 }
 

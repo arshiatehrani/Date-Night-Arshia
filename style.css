@@ -776,6 +776,15 @@ input[type="date"]::selection { background: transparent; }
     color: var(--text-muted);
 }
 
+.countdown-text {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--primary);
+}
+
 .bot-reminder-box {
     width: 100%;
     padding-top: 15px;
