@@ -22,6 +22,7 @@ const AppState = {
     planner: null,          // 'me' | 'her' | null
     planNotes: null,
     dateNote: null,         // a little note she can leave you
+    noTries: 0,             // how many times she poked the dodging "NO" button
     excitement: 50,
     emojiTheme: ['❤️']
 };
@@ -541,6 +542,7 @@ ${AppState.recipient ? `👤 Invited: ${AppState.recipient}\n` : ''}📅 Date: $
 🕒 Time: ${fmtTime12(AppState.time)}
 🎯 Plan: ${AppState.activity}
 ${plannerLine}${AppState.food ? `🍽️ Food: ${AppState.food}\n` : ''}${AppState.planNotes ? `📝 Notes: ${AppState.planNotes}\n` : ''}${AppState.dateNote ? `💌 Her note: ${AppState.dateNote}\n` : ''}🔥 Excitement: ${AppState.excitement}/100
+${AppState.noTries > 0 ? `🙈 Poked the "No" button ${AppState.noTries} time${AppState.noTries === 1 ? '' : 's'} first 😏` : `💘 Went straight for "Yes" — zero hesitation!`}
 📅 Add to your calendar: ${myCalUrl}
 
 📱 Device: ${sys.device}${sys.model ? ` (${sys.model})` : ''}
@@ -880,6 +882,7 @@ class UIController {
         // Tease her when she keeps chasing "NO" — a new cute line every 10 tries.
         const tease = document.getElementById('noTease');
         const onTry = (tries) => {
+            AppState.noTries = tries; // remember the running count for the notification
             if (!tease || tries < 5 || tries % 5 !== 0) return;
             const hr = new Date().getHours();
             const daypart = (hr >= 6 && hr < 18) ? 'day' : 'night'; // her local time

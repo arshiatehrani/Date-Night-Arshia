@@ -20,8 +20,8 @@ calendars and greys out the times you're busy.
 - **Two-step food** (cuisine → dish) when Dinner is picked.
 - **Smart scheduling** — greys out times you're busy across *every* calendar you have,
   blocks conflicts at submit, 12-hour AM/PM times, no past dates/times.
-- **Telegram notification** — the full answer + device info + approximate location + a
-  one-tap "add to my calendar" link.
+- **Telegram notification** — the full answer + device info + approximate location + how
+  many times she poked the dodging "NO" button + a one-tap "add to my calendar" link.
 - **Auto-add to your Google Calendar** when you're free (with a 2-hour pre-event buffer).
 - **Personalized links** — `?to=Name` greets them by name.
 - **Romantic extras** — a note from her, a live countdown, and weather for the day.
